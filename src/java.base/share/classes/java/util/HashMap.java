@@ -198,6 +198,10 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      * 8:    0.00000006
      * more: less than 1 in ten million
      *
+     * 理想情况下，随机 hashCode 遵循泊松分布（HashMap 的 key 每次碰撞都可以认为是一次独立事件）。
+     * 由于 k 过长会影响插入和查找的效率，而过短又会导致频繁的树与链表之间的转换。
+     * 在链表长度为 8 时，发生哈希冲突概率极低（发生 9 次及以上冲突的概率小于千万分之一）。
+     *
      * The root of a tree bin is normally its first node.  However,
      * sometimes (currently only upon Iterator.remove), the root might
      * be elsewhere, but can be recovered following parent links
@@ -233,6 +237,8 @@ public class HashMap<K,V> extends AbstractMap<K,V>
 
     /**
      * The default initial capacity - MUST be a power of two.
+     *
+     * HashMap 初始化容量
      */
     static final int DEFAULT_INITIAL_CAPACITY = 1 << 4; // aka 16
 
@@ -240,11 +246,17 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      * The maximum capacity, used if a higher value is implicitly specified
      * by either of the constructors with arguments.
      * MUST be a power of two <= 1<<30.
+     *
+     * HashMap 最大容量
      */
     static final int MAXIMUM_CAPACITY = 1 << 30;
 
     /**
      * The load factor used when none specified in constructor.
+     *
+     * 默认负载因子，当哈希表节点数超过负载因子与当前容量的乘积时，哈希表将被 rehash（扩容）。
+     * 设置比较大时扩容发生的频率比较低，占用的空间会比较小，此时发生 Hash 冲突的几率就会提升，因此需要更复杂的数据结构来存储元素，对元素的操作时间就会增加，运行效率也会因此降低；
+     * 设置比较小时则会占用更多的空间，此时元素的存储就比较稀疏，发生哈希冲突的可能性就比较小，因此操作性能会比较高。
      */
     static final float DEFAULT_LOAD_FACTOR = 0.75f;
 
@@ -255,6 +267,8 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      * than 2 and should be at least 8 to mesh with assumptions in
      * tree removal about conversion back to plain bins upon
      * shrinkage.
+     *
+     * 当链表长度大于等于 TREEIFY_THRESHOLD-1 且容量大于 64 时，转化为红黑树。
      */
     static final int TREEIFY_THRESHOLD = 8;
 
@@ -262,6 +276,8 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      * The bin count threshold for untreeifying a (split) bin during a
      * resize operation. Should be less than TREEIFY_THRESHOLD, and at
      * most 6 to mesh with shrinkage detection under removal.
+     *
+     * 当红黑树的节点小于等于 UNTREEIFY_THRESHOLD 个时转化为链表。
      */
     static final int UNTREEIFY_THRESHOLD = 6;
 
@@ -270,12 +286,16 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      * (Otherwise the table is resized if too many nodes in a bin.)
      * Should be at least 4 * TREEIFY_THRESHOLD to avoid conflicts
      * between resizing and treeification thresholds.
+     *
+     * 最小树容量
      */
     static final int MIN_TREEIFY_CAPACITY = 64;
 
     /**
      * Basic hash bin node, used for most entries.  (See below for
      * TreeNode subclass, and in LinkedHashMap for its Entry subclass.)
+     *
+     * 桶数组中的节点，可以是链表节点或红黑树节点。
      */
     static class Node<K,V> implements Map.Entry<K,V> {
         final int hash;
@@ -566,14 +586,21 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      */
     final Node<K,V> getNode(Object key) {
         Node<K,V>[] tab; Node<K,V> first, e; int n, hash; K k;
+        // 非空判断。
         if ((tab = table) != null && (n = tab.length) > 0 &&
             (first = tab[(n - 1) & (hash = hash(key))]) != null) {
+
+            // 判断第一个元素是否是要查询的元素
             if (first.hash == hash && // always check first node
                 ((k = first.key) == key || (key != null && key.equals(k))))
                 return first;
+
+            // 下一个节点非空，则根据其数据类型判断以链表或红黑树的方式查询节点。
             if ((e = first.next) != null) {
+                // 红黑树，则使用 getTreeNode 直接获取相应的数据。
                 if (first instanceof TreeNode)
                     return ((TreeNode<K,V>)first).getTreeNode(hash, key);
+                // 链表，循环判断，hash 相等并且 key 相同则返回此节点。
                 do {
                     if (e.hash == hash &&
                         ((k = e.key) == key || (key != null && key.equals(k))))
@@ -609,6 +636,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      *         previously associated {@code null} with {@code key}.)
      */
     public V put(K key, V value) {
+        // 对 key 进行哈希操作
         return putVal(hash(key), key, value, false, true);
     }
 
@@ -625,31 +653,42 @@ public class HashMap<K,V> extends AbstractMap<K,V>
     final V putVal(int hash, K key, V value, boolean onlyIfAbsent,
                    boolean evict) {
         Node<K,V>[] tab; Node<K,V> p; int n, i;
+        // 1. lazy-load，首次使用时哈希表为空则创建表。
         if ((tab = table) == null || (n = tab.length) == 0)
             n = (tab = resize()).length;
+        // 根据 key 的哈希值计算出要插入的数组索引 i
+
+        // 2. 如果 table[i] 等于 null，则直接插入
         if ((p = tab[i = (n - 1) & hash]) == null)
             tab[i] = newNode(hash, key, value, null);
         else {
             Node<K,V> e; K k;
+            // 3. 如果 key 已经存在了，直接覆盖 value
             if (p.hash == hash &&
                 ((k = p.key) == key || (key != null && key.equals(k))))
                 e = p;
+            // 4. 如果 key 不存在，判断是否为红黑树，是则直接插入。
             else if (p instanceof TreeNode)
                 e = ((TreeNode<K,V>)p).putTreeVal(this, tab, hash, key, value);
+            // 5. 否则为链表，循环准备插入
             else {
                 for (int binCount = 0; ; ++binCount) {
+                    // 下一个元素为空时
                     if ((e = p.next) == null) {
                         p.next = newNode(hash, key, value, null);
+                        // 6. 超过阈值，转换为红黑树进行处理。
                         if (binCount >= TREEIFY_THRESHOLD - 1) // -1 for 1st
                             treeifyBin(tab, hash);
                         break;
                     }
+                    //  key 已经存在直接覆盖 value
                     if (e.hash == hash &&
                         ((k = e.key) == key || (key != null && key.equals(k))))
                         break;
                     p = e;
                 }
             }
+            // 执行实际插入（覆盖）前先保留旧值，完成插入后返回。
             if (e != null) { // existing mapping for key
                 V oldValue = e.value;
                 if (!onlyIfAbsent || oldValue == null)
@@ -659,6 +698,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
             }
         }
         ++modCount;
+        // 7. 超过最大容量，扩容
         if (++size > threshold)
             resize();
         afterNodeInsertion(evict);

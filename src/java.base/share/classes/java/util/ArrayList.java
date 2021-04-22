@@ -114,6 +114,8 @@ public class ArrayList<E> extends AbstractList<E>
 
     /**
      * Default initial capacity.
+     *
+     * 默认初始容量
      */
     private static final int DEFAULT_CAPACITY = 10;
 
@@ -134,11 +136,15 @@ public class ArrayList<E> extends AbstractList<E>
      * The capacity of the ArrayList is the length of this array buffer. Any
      * empty ArrayList with elementData == DEFAULTCAPACITY_EMPTY_ELEMENTDATA
      * will be expanded to DEFAULT_CAPACITY when the first element is added.
+     *
+     * 实际存储元素的数组缓冲区。ArrayList 的容量即此数组的长度。
      */
     transient Object[] elementData; // non-private to simplify nested class access
 
     /**
      * The size of the ArrayList (the number of elements it contains).
+     *
+     * 实际存储数据量
      *
      * @serial
      */
@@ -225,12 +231,16 @@ public class ArrayList<E> extends AbstractList<E>
      * Increases the capacity to ensure that it can hold at least the
      * number of elements specified by the minimum capacity argument.
      *
+     * 内部数组扩容。
+     *
      * @param minCapacity the desired minimum capacity
      * @throws OutOfMemoryError if minCapacity is less than zero
      */
     private Object[] grow(int minCapacity) {
         int oldCapacity = elementData.length;
         if (oldCapacity > 0 || elementData != DEFAULTCAPACITY_EMPTY_ELEMENTDATA) {
+
+            // 容量至少要增加 minCapacity - oldCapacity，最理想是扩大原数组的 0.5 倍。
             int newCapacity = ArraysSupport.newLength(oldCapacity,
                     minCapacity - oldCapacity, /* minimum growth */
                     oldCapacity >> 1           /* preferred growth */);
@@ -448,6 +458,8 @@ public class ArrayList<E> extends AbstractList<E>
      * This helper method split out from add(E) to keep method
      * bytecode size under 35 (the -XX:MaxInlineSize default value),
      * which helps when add(E) is called in a C1-compiled loop.
+     *
+     * 添加元素到指定位置。
      */
     private void add(E e, Object[] elementData, int s) {
         if (s == elementData.length)
@@ -458,6 +470,8 @@ public class ArrayList<E> extends AbstractList<E>
 
     /**
      * Appends the specified element to the end of this list.
+     *
+     * 添加元素到数组的末尾
      *
      * @param e element to be appended to this list
      * @return {@code true} (as specified by {@link Collection#add})
@@ -478,10 +492,16 @@ public class ArrayList<E> extends AbstractList<E>
      * @throws IndexOutOfBoundsException {@inheritDoc}
      */
     public void add(int index, E element) {
+
+        // 检查是否越界，是则抛出 IndexOutOfBoundsException。
         rangeCheckForAdd(index);
         modCount++;
         final int s;
+
+        // 否则把 index 后的元素挪位，设置
         Object[] elementData;
+
+        // 实际存储数据量等于数组长度，扩容。
         if ((s = size) == (elementData = this.elementData).length)
             elementData = grow();
         System.arraycopy(elementData, index,
@@ -637,6 +657,8 @@ public class ArrayList<E> extends AbstractList<E>
     private void fastRemove(Object[] es, int i) {
         modCount++;
         final int newSize;
+
+        // 如果删除的不是末尾元素，则需要把 i 后面的 newSize-i 个元素都覆盖到前面。
         if ((newSize = size - 1) > i)
             System.arraycopy(es, i + 1, es, i, newSize - i);
         es[size = newSize] = null;

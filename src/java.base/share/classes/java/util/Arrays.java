@@ -3572,6 +3572,8 @@ public class Arrays {
      * Such indices will exist if and only if the specified length
      * is greater than that of the original array.
      *
+     * 复制指定的数组，通过截断或填充零，使新创建的副本具有指定的长度。
+     *
      * @param original the array to be copied
      * @param newLength the length of the copy to be returned
      * @return a copy of the original array, truncated or padded with zeros
@@ -3582,6 +3584,7 @@ public class Arrays {
      */
     public static int[] copyOf(int[] original, int newLength) {
         int[] copy = new int[newLength];
+        // 调用本地方法，从指定位置开始，把指定的源数组复制数组到目标数组的指定位置。
         System.arraycopy(original, 0, copy, 0,
                          Math.min(original.length, newLength));
         return copy;
